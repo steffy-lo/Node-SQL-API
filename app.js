@@ -55,7 +55,7 @@ function getQueryResults(byCodes, byNames) {
 
         } else if (byCodes) {
             // if both byCodes and byNames are provided, byNames will be ignored and will only filter by code
-            db.query('SELECT * FROM Products WHERE code = ?', [byCodes], (err, result) => {
+            db.query('SELECT * FROM Products WHERE code IN (?)', [byCodes], (err, result) => {
                 if (err) {
                     console.log(err);
                     reject(err);
@@ -65,7 +65,7 @@ function getQueryResults(byCodes, byNames) {
 
         } else {
             // filter by name
-            db.query('SELECT * FROM Products WHERE name = ?', [byNames], (err, result) => {
+            db.query('SELECT * FROM Products WHERE name IN (?)' + [byNames], (err, result) => {
                 if (err) {
                     console.log(err);
                     reject(err);
@@ -151,11 +151,17 @@ app.get("/products", (req, res) => {
         } else if (data.id) { 
             // we have an authenticated user
 
-            const itemsPerPage = parseInt(req.query.itemsPerPage);
-            const pageNumber = parseInt(req.query.pageNumber);
+            let itemsPerPage = req.query.itemsPerPage;
+            let pageNumber = req.query.pageNumber;
 
             let pagination = false;
             if (itemsPerPage && pageNumber) {
+                try {
+                    itemsPerPage = parseInt(itemsPerPage);
+                    pageNumber = parseInt(pageNumber);
+                } catch {
+                    res.status(400).send()
+                }
                 // with pagination
                 pagination = { 
                     itemsPerPage, 
@@ -166,8 +172,8 @@ app.get("/products", (req, res) => {
             }
 
     
-            const byCodes = req.query.filterByCodes;
-            const byNames = req.query.filterByNames;
+            const byCodes = req.query.filterByCodes ? req.query.filterByCodes.split(",") : undefined;
+            const byNames = req.query.filterByNames ? req.query.filterByNames.split(",") : undefined;
 
             let result = await getQueryResults(byCodes, byNames);
             if (pagination) {
