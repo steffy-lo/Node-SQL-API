@@ -15,7 +15,9 @@ JWT_EXPIRES_IN = 1d
 JWT_COOKIE_EXPIRES = 1
 ```
 
-### 2. Run the server
+### 2. Import the mock-data.sql
+
+### 3. Run the server
 ```
 npm start
 ```
