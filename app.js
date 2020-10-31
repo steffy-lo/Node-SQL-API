@@ -76,6 +76,19 @@ function getQueryResults(byCodes, byNames) {
     })
 }
 
+async function addUser(username, password) {
+    let hashedPassword = await bcrypt.hash(password, 8);
+    return new Promise((resolve, reject) => {
+        db.query('INSERT INTO users SET ?', {username: username, password: hashedPassword}, (err, result) => {
+                if (err) {
+                    console.log(err);
+                    reject(err);
+                }
+                resolve(result);
+            });
+    })
+}
+
 //=========================================== END POINTS ===================================================================
 
 app.get("/", (req, res) => {
@@ -91,23 +104,18 @@ app.post("/register", (req, res) => {
         if (err) {
             console.log(err);
         }
-
         if (result.length > 0) {
             res.send({message: 'The username is already taken.'})
         } else {
-            let hashedPassword = await bcrypt.hash(password, 8);
-            db.query('INSERT INTO users SET ?', 
-            {
-                username: username, 
-                password: hashedPassword
-            }, (err, result) => {
-                if (err) {
-                    console.log(err);
-                } else {
-                    console.log(result);
-                    res.send({message: 'New account for ' + username + ' has been created.'})
-                }
+            addUser(username, password)
+            .then(result => {
+                console.log(result);
+                res.send({message: 'New account for ' + username + ' has been created.'})
             })
+            .catch(err => {
+                console.log(err);
+            })
+        
         }  
 
     })
@@ -123,7 +131,7 @@ app.post("/login", async (req, res) => {
             console.log(err);
         }
         if (!result || !(await bcrypt.compare(password, result[0].password)) ) {
-            res.status(401).send({message: "Email or password is incorrect."})
+            res.status(401).send({message: "Username or password is incorrect."})
         } else {
             const id = result[0].id;
             const token = jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -147,7 +155,7 @@ app.get("/products", (req, res) => {
 
     jwt.verify(jwtCookie, process.env.JWT_SECRET, async (err, data) => {
         if (err) {
-            res.status(403).send()
+            res.status(403).send({message: "Unauthorized"})
         } else if (data.id) { 
             // we have an authenticated user
 
@@ -203,6 +211,8 @@ app.get("/products", (req, res) => {
 })
 
 // Express server listening...
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Listening on port ${PORT}...`);
 });
+
+module.exports = {app, db, server, addUser};
